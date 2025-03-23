@@ -141,14 +141,12 @@
         // Set dynamic copyright year
         document.getElementById('year').textContent = new Date().getFullYear();
 
-        // Get URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
         const videoInput = document.getElementById('videoInput');
         const totalContainers = document.getElementById('totalContainers');
 
-        // Set initial values from URL or defaults
-        videoInput.value = urlParams.get('video') || 'KvkmgancSr4';
-        totalContainers.value = urlParams.get('instances') || '10';
+        // Load values from localStorage or defaults
+        videoInput.value = localStorage.getItem('video') || 'KvkmgancSr4';
+        totalContainers.value = localStorage.getItem('instances') || '10';
 
         // Add Enter key listeners
         videoInput.addEventListener('keydown', function(event) {
@@ -179,11 +177,15 @@
             let instances = parseInt(totalContainers.value) || 1;
             instances = Math.min(Math.max(instances, 1), 50); // Enforce 50 max
             totalContainers.value = instances;
-            window.location.href = `${window.location.pathname}?video=${encodeURIComponent(video)}&instances=${instances}`;
+            localStorage.setItem('video', video);
+            localStorage.setItem('instances', instances);
+            window.location.reload(); // Reload without URL params
         }
 
         function triggerReset() {
-            window.location.href = `${window.location.pathname}?video=KvkmgancSr4&instances=10`;
+            localStorage.setItem('video', 'KvkmgancSr4');
+            localStorage.setItem('instances', '10');
+            window.location.reload(); // Reload without URL params
         }
 
         function clearPlayers() {
@@ -219,11 +221,8 @@
 
             let total = parseInt(totalContainers.value) || 1;
             total = Math.min(Math.max(total, 1), 50); // Enforce 50 max on load
-            totalContainers.value = total; // Update input field
-            // Update URL to reflect clamped value
-            if (urlParams.get('instances') != total) {
-                window.history.replaceState({}, document.title, `${window.location.pathname}?video=${encodeURIComponent(videoInput.value)}&instances=${total}`);
-            }
+            totalContainers.value = total;
+            localStorage.setItem('instances', total); // Update localStorage
 
             for (let i = 0; i < total; i++) {
                 let playerDiv = document.createElement('div');
@@ -274,7 +273,7 @@
             clearPlayers();
         }
 
-        // Auto-generate on load with URL params
+        // Auto-generate on load
         window.onload = generateVideos;
     </script>
 </body>
