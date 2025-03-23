@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Watch Time</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+        }
+        .sticky-wrapper {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 1000;
+            padding-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #333;
+        }
+        .header p {
+            margin: 5px 0;
+            font-size: 16px;
+            color: #666;
+        }
+        .header a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        .header a:hover {
+            text-decoration: underline;
+        }
+        .ui {
+            margin-bottom: 20px;
+        }
+        .ui input {
+            padding: 5px;
+            margin: 5px;
+            width: 200px;
+        }
+        .ui button {
+            padding: 5px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .ui button:hover {
+            background-color: #45a049;
+        }
+        .ui button.reset {
+            background-color: #f44336;
+        }
+        .ui button.reset:hover {
+            background-color: #d32f2f;
+        }
+        .card {
+            width: 300px;
+            display: inline-block;
+            margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            background-color: #fff;
+            vertical-align: top;
+        }
+        .card iframe {
+            width: 100%;
+            height: 169px;
+            border: none;
+        }
+        .container {
+            text-align: center;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .footer a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .loading {
+            display: none;
+            color: #666;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sticky-wrapper">
+        <div class="header">
+            <h1>YouTube Watch Time</h1>
+            <p><strong>Usage:</strong> Enter a YouTube video ID or URL and the number of instances (1-50). Click "Generate Watch Time" or press Enter to create multiple video players that play in slow motion (0.25x), muted, and looped to boost watch time (captions off).</p>
+            <p>Created by <a href="https://x.com/@codebyhasan" target="_blank">@codebyhasan</a></p>
+        </div>
+        <div class="ui">
+            <input type="text" id="videoInput" placeholder="Enter YouTube Video ID or URL" value="KvkmgancSr4">
+            <input type="number" id="totalContainers" placeholder="Total Instances" value="10" min="1" max="50">
+            <button onclick="generateVideos()">Generate Watch Time</button>
+            <button class="reset" onclick="resetVideos()">Reset</button>
+        </div>
+        <div class="loading" id="loadingMessage">Generating...</div>
+    </div>
+    <div class="container" id="cardContainer"></div>
+    <div class="footer" id="copyright">
+        © <span id="year"></span> <a href="https://x.com/@codebyhasan" target="_blank">@codebyhasan</a>. All rights reserved.
+    </div>
+
+    <!-- YouTube IFrame API Script -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+        let players = [];
+
+        // Set dynamic copyright year
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        // Add Enter key listener to input fields
+        document.getElementById('videoInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                generateVideos();
+            }
+        });
+        document.getElementById('totalContainers').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                generateVideos();
+            }
+        });
+
+        function extractVideoId(url) {
+            const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i;
+            const match = url.match(regex);
+            if (match && match[1]) {
+                return match[1];
+            }
+            return (url.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(url)) ? url : null;
+        }
+
+        function generateVideos() {
+            players.forEach(player => player.destroy());
+            players = [];
+            const container = document.getElementById('cardContainer');
+            const loadingMessage = document.getElementById('loadingMessage');
+            container.innerHTML = '';
+            loadingMessage.style.display = 'block';
+
+            let videoInput = document.getElementById('videoInput').value.trim();
+            let total = parseInt(document.getElementById('totalContainers').value) || 1;
+            total = Math.min(Math.max(total, 1), 50);
+
+            const videoId = extractVideoId(videoInput);
+            if (!videoId) {
+                alert("Invalid input. Please enter a valid YouTube video ID (11 characters) or a URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID).");
+                loadingMessage.style.display = 'none';
+                return;
+            }
+
+            for (let i = 0; i < total; i++) {
+                let playerDiv = document.createElement('div');
+                playerDiv.id = 'player' + i;
+                playerDiv.className = 'card';
+                container.appendChild(playerDiv);
+
+                players[i] = new YT.Player('player' + i, {
+                    height: '169',
+                    width: '300',
+                    videoId: videoId,
+                    playerVars: {
+                        'autoplay': 1,
+                        'controls': 0,
+                        'rel': 0,
+                        'origin': window.location.origin,
+                        'modestbranding': 1,
+                        'loop': 1,
+                        'playlist': videoId,
+                        'cc_load_policy': 0 // Disable captions/subtitles
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onError': onPlayerError
+                    }
+                });
+            }
+            setTimeout(() => loadingMessage.style.display = 'none', 1000);
+        }
+
+        function resetVideos() {
+            players.forEach(player => player.destroy());
+            players = [];
+            document.getElementById('cardContainer').innerHTML = '';
+            document.getElementById('videoInput').value = 'KvkmgancSr4';
+            document.getElementById('totalContainers').value = '10';
+            document.getElementById('loadingMessage').style.display = 'none';
+        }
+
+        function onPlayerReady(event) {
+            event.target.setPlaybackRate(0.25);
+            event.target.mute();
+            event.target.playVideo();
+        }
+
+        function onPlayerError(event) {
+            let errorMsg = "Error loading video: ";
+            switch (event.data) {
+                case 2: errorMsg += "Invalid video ID."; break;
+                case 5: errorMsg += "HTML5 player error."; break;
+                case 100: errorMsg += "Video not found."; break;
+                case 101: case 150: errorMsg += "Embedding not allowed by video owner."; break;
+                default: errorMsg += "Unknown error (Code: " + event.data + ").";
+            }
+            alert(errorMsg + " Please check the video ID/URL and ensure embedding is allowed.");
+            document.getElementById('loadingMessage').style.display = 'none';
+        }
+
+        window.onload = generateVideos;
+    </script>
+</body>
+</html>
