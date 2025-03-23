@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Watch Time</title>
+    <!-- Open Graph Meta Tags for Link Preview -->
+    <meta property="og:title" content="YouTube Watch Time by @codebyhasan">
+    <meta property="og:description" content="A tool to generate up to 50 YouTube video instances (default 10) at 0.25x speed, muted, and looped to boost watch time. Visit: youtubewatchtime.onrender.com, youtubewatchtime.pages.dev">
+    <meta property="og:image" content="https://img.recraft.ai/19dc4H8DlWRWzffrnhv02FkpHqJFCh3D-lfgzCYzYVs/rs:fit:1820:1024:0/q:95/g:no/plain/abs://prod/images/c9a4998e-7056-450f-8f15-ab555e043f5d@svg">
+    <meta property="og:url" content="https://codebyhasan.github.io/youtubewatchtime">
+    <meta property="og:type" content="website">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -111,14 +117,14 @@
     <div class="sticky-wrapper">
         <div class="header">
             <h1>YouTube Watch Time</h1>
-            <p><strong>Usage:</strong> Enter a YouTube video ID or URL and the number of instances (1-50). Click "Generate Watch Time" or press Enter to create multiple video players that play in slow motion (0.25x), muted, and looped to boost watch time (captions off).</p>
+            <p><strong>Usage:</strong> Enter a YouTube video ID or URL and the number of instances (1-50). Click "Generate Watch Time" or press Enter to create multiple video players that play in slow motion (0.25x), muted, and looped to boost watch time.</p>
             <p>Created by <a href="https://x.com/@codebyhasan" target="_blank">@codebyhasan</a></p>
         </div>
         <div class="ui">
             <input type="text" id="videoInput" placeholder="Enter YouTube Video ID or URL" value="KvkmgancSr4">
             <input type="number" id="totalContainers" placeholder="Total Instances" value="10" min="1" max="50">
-            <button onclick="generateVideos()">Generate Watch Time</button>
-            <button class="reset" onclick="resetVideos()">Reset</button>
+            <button onclick="triggerGenerate()">Generate Watch Time</button>
+            <button class="reset" onclick="triggerReset()">Reset</button>
         </div>
         <div class="loading" id="loadingMessage">Generating...</div>
     </div>
@@ -135,15 +141,27 @@
         // Set dynamic copyright year
         document.getElementById('year').textContent = new Date().getFullYear();
 
-        // Add Enter key listener to input fields
-        document.getElementById('videoInput').addEventListener('keypress', function(event) {
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoInput = document.getElementById('videoInput');
+        const totalContainers = document.getElementById('totalContainers');
+
+        // Set initial values from URL or defaults
+        videoInput.value = urlParams.get('video') || 'KvkmgancSr4';
+        totalContainers.value = urlParams.get('instances') || '10';
+
+        // Add Enter key listeners
+        videoInput.addEventListener('keydown', function(event) {
             if (event.key === 'Enter') {
-                generateVideos();
+                event.preventDefault();
+                triggerGenerate();
             }
         });
-        document.getElementById('totalContainers').addEventListener('keypress', function(event) {
+
+        totalContainers.addEventListener('keydown', function(event) {
             if (event.key === 'Enter') {
-                generateVideos();
+                event.preventDefault();
+                triggerGenerate();
             }
         });
 
@@ -156,24 +174,50 @@
             return (url.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(url)) ? url : null;
         }
 
-        function generateVideos() {
-            players.forEach(player => player.destroy());
+        function triggerGenerate() {
+            const video = videoInput.value.trim();
+            let instances = parseInt(totalContainers.value) || 1;
+            instances = Math.min(Math.max(instances, 1), 50); // Enforce 50 max
+            totalContainers.value = instances;
+            window.location.href = `${window.location.pathname}?video=${encodeURIComponent(video)}&instances=${instances}`;
+        }
+
+        function triggerReset() {
+            window.location.href = `${window.location.pathname}?video=KvkmgancSr4&instances=10`;
+        }
+
+        function clearPlayers() {
+            players.forEach(player => {
+                if (player && typeof player.stopVideo === 'function') {
+                    player.stopVideo();
+                }
+                if (player && typeof player.destroy === 'function') {
+                    player.destroy();
+                }
+                const iframe = document.getElementById(player.a.id);
+                if (iframe && iframe.parentNode) {
+                    iframe.parentNode.removeChild(iframe);
+                }
+            });
             players = [];
+        }
+
+        function generateVideos() {
+            clearPlayers();
+
             const container = document.getElementById('cardContainer');
             const loadingMessage = document.getElementById('loadingMessage');
             container.innerHTML = '';
             loadingMessage.style.display = 'block';
 
-            let videoInput = document.getElementById('videoInput').value.trim();
-            let total = parseInt(document.getElementById('totalContainers').value) || 1;
-            total = Math.min(Math.max(total, 1), 50);
-
-            const videoId = extractVideoId(videoInput);
+            const videoId = extractVideoId(videoInput.value);
             if (!videoId) {
                 alert("Invalid input. Please enter a valid YouTube video ID (11 characters) or a URL (e.g., https://www.youtube.com/watch?v=VIDEO_ID).");
                 loadingMessage.style.display = 'none';
                 return;
             }
+
+            const total = parseInt(totalContainers.value) || 1;
 
             for (let i = 0; i < total; i++) {
                 let playerDiv = document.createElement('div');
@@ -193,7 +237,7 @@
                         'modestbranding': 1,
                         'loop': 1,
                         'playlist': videoId,
-                        'cc_load_policy': 0 // Disable captions/subtitles
+                        'cc_load_policy': 0
                     },
                     events: {
                         'onReady': onPlayerReady,
@@ -202,15 +246,6 @@
                 });
             }
             setTimeout(() => loadingMessage.style.display = 'none', 1000);
-        }
-
-        function resetVideos() {
-            players.forEach(player => player.destroy());
-            players = [];
-            document.getElementById('cardContainer').innerHTML = '';
-            document.getElementById('videoInput').value = 'KvkmgancSr4';
-            document.getElementById('totalContainers').value = '10';
-            document.getElementById('loadingMessage').style.display = 'none';
         }
 
         function onPlayerReady(event) {
@@ -230,8 +265,10 @@
             }
             alert(errorMsg + " Please check the video ID/URL and ensure embedding is allowed.");
             document.getElementById('loadingMessage').style.display = 'none';
+            clearPlayers();
         }
 
+        // Auto-generate on load with URL params
         window.onload = generateVideos;
     </script>
 </body>
