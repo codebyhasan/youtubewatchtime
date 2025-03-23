@@ -1,0 +1,33 @@
+name: Deploy to GitHub Pages
+
+# Controls when the workflow will run
+on:
+  push:
+    branches:
+      - main # Triggers on pushes to the main branch
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+
+# A workflow run is made up of one or more jobs
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+
+    steps:
+      # Checkout the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Node.js (optional, only if you add build steps later)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub
+          publish_dir: ./ # Deploy the root directory (where index.html lives)
+          publish_branch: gh-pages # Deploy to the gh-pages branch
+          force_orphan: true # Keep the gh-pages branch clean (no history)
